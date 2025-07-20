@@ -9,3 +9,23 @@ dependencies = [
     "lxml>=6.0.0",
     "pydantic>=2.11.7",
 ]
+
+[tool.ruff]
+line-length = 100
+target-version = "py313"
+select = [
+    "ALL",
+]
+ignore = [
+    "PLR0913",
+    "T201",
+    "COM812",
+    "DTZ001",
+    "S311",
+    "D212",
+]
+[tool.ruff.format]
+skip-magic-trailing-comma = false
+quote-style = 'single'
+[tool.ruff.lint]
+flake8-quotes = {inline-quotes = "single"}
