@@ -90,7 +90,9 @@ class SyncScraper(BaseScraper[httpx.Client]):
     def __enter__(self) -> 'SyncScraper':
         """Enter the context, creating a client if needed."""
         if self._owns_client:
-            self._client = httpx.Client(follow_redirects=True, http2=True)
+            self._client = httpx.Client(
+                follow_redirects=True, http2=True, headers=self.config.headers
+            )
         return self
 
     def __exit__(
@@ -127,7 +129,9 @@ class AsyncScraper(BaseScraper[httpx.AsyncClient]):
     async def __aenter__(self) -> 'AsyncScraper':
         """Enter the async context, creating a client if needed."""
         if self._owns_client:
-            self._client = httpx.AsyncClient(follow_redirects=True, http2=True)
+            self._client = httpx.AsyncClient(
+                follow_redirects=True, http2=True, headers=self.config.headers
+            )
         return self
 
     async def __aexit__(

@@ -1,0 +1,40 @@
+default_headers: &default_headers
+  User-Agent: "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Safari/537.36"
+
+scrapers:
+
+  - name: "html_duckduckgo"
+    base_url: "https://html.duckduckgo.com/html/"
+    query_param: "q"
+    container: "//div[contains(@class, 'web-result')]"
+    title: ".//a[contains(@class, 'result__a')]/text()"
+    url: ".//a[contains(@class, 'result__a')]/@href"
+    snippet: ".//a[contains(@class, 'result__snippet')]"
+    headers: *default_headers
+
+  - name: "lite_duckduckgo"
+    base_url: "https://lite.duckduckgo.com/lite/"
+    query_param: "q"
+    container: "//a[@class='result-link']/ancestor::tr"
+    title: ".//a[@class='result-link']/text()"
+    url: ".//a[@class='result-link']/@href"
+    snippet: "following-sibling::tr[1]/td[@class='result-snippet']"
+    headers: *default_headers
+
+  - name: "startpage"
+    base_url: "https://www.startpage.com/sp/search"
+    query_param: "query"
+    container: "//div[contains(@class, 'result')]"
+    title: ".//h2[contains(@class, 'wgl-title')]/text()"
+    url: ".//a[contains(@class, 'result-title')]/@href"
+    snippet: ".//p[contains(@class, 'description')]"
+    headers: *default_headers
+
+  - name: "brave"
+    base_url: "https://search.brave.com/search"
+    container: "//div[contains(@class, 'snippet ')]"
+    title: ".//div[contains(@class, 'title')]/text()"
+    url: ".//a[contains(@class, 'heading-serpresult')]/@href"
+    snippet: ".//div[contains(@class, 'snippet-description')]"
+    query_param: 'q'
+    headers: *default_headers
