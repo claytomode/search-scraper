@@ -24,9 +24,17 @@ ignore = [
     "DTZ001",
     "S311",
     "D212",
+    "S101",
 ]
 [tool.ruff.format]
 skip-magic-trailing-comma = false
 quote-style = 'single'
 [tool.ruff.lint]
 flake8-quotes = {inline-quotes = "single"}
+
+[dependency-groups]
+dev = [
+    "pytest>=8.4.1",
+    "pytest-asyncio>=1.1.0",
+    "pytest-httpx>=0.35.0",
+]
