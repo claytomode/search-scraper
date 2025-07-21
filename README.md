@@ -1,5 +1,5 @@
 # Search Scraper
-
+Trivially scrape search results from static HTML search engines.
 > [!Warning]
 > This tool is intended for **educational and research purposes only**. Web scraping search engines may violate their Terms of Service. Please review the ToS of any search engine you plan on scraping.
 
