@@ -9,5 +9,7 @@ Trivially scrape search results from static HTML search engines.
 
 This scraper is driven by a config dataclass. You can use the premade `config.yaml` or define your own based on the config dataclass. This allows you to easily add support for a new search engine or fix an existing one if its HTML structure changes.
 
+Clients use HTTP/1.1 with a 10s timeout. HTTP/2 is off on purpose — several engines stall forever on h2. `search_async` / `search_sync` treat a 200 with zero parsed hits (bot wall, layout change) as a miss and fail over to the next engine. Title + URL is enough; snippets are optional.
+
 The main idea is to define **XPath selectors** for the data you want to extract and pass them to the scraper client.
 LLMs are actually pretty good at this! You can send in the HTML webpage of an example search along with the config dataclass and ask it to create one for your designated search engine.

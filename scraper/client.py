@@ -1,7 +1,7 @@
 """Configurable, asynchronous client for scraping search engines."""
 
 from types import TracebackType
-from typing import TYPE_CHECKING, TypeVar
+from typing import TYPE_CHECKING, Any, TypeVar
 
 import httpx
 from lxml import html
@@ -15,6 +15,35 @@ if TYPE_CHECKING:
     from lxml.etree import _Element
 
 ClientT = TypeVar('ClientT', httpx.Client, httpx.AsyncClient)
+
+# HTTP/2 to html.duckduckgo.com / lite.duckduckgo.com often stalls forever.
+_DEFAULT_TIMEOUT = httpx.Timeout(10.0, connect=5.0)
+
+
+def _client_kwargs(config: ScraperConfig) -> dict[str, Any]:
+    return {
+        'follow_redirects': True,
+        'http2': False,
+        'timeout': _DEFAULT_TIMEOUT,
+        'headers': config.headers,
+    }
+
+
+def _node_text(nodes: list[Any]) -> str:
+    parts: list[str] = []
+    for node in nodes:
+        if hasattr(node, 'text_content'):
+            parts.append(node.text_content())
+        else:
+            parts.append(str(node))
+    return ''.join(parts).strip().replace('\n', ' ')
+
+
+def _wrap_http_error(exc: httpx.HTTPError) -> NetworkError:
+    url = getattr(getattr(exc, 'request', None), 'url', None)
+    if isinstance(exc, httpx.HTTPStatusError):
+        return NetworkError(f'HTTP {exc.response.status_code} from {url!r}.')
+    return NetworkError(f'An error occurred while requesting {url!r}.')
 
 
 class BaseScraper[ClientT: (httpx.Client, httpx.AsyncClient)]:
@@ -66,14 +95,12 @@ class BaseScraper[ClientT: (httpx.Client, httpx.AsyncClient)]:
             url_list = container.xpath(self.config.url)
             snippet_nodes = container.xpath(self.config.snippet)
 
-            if not (title_list and url_list and snippet_nodes):
+            if not (title_list and url_list):
                 continue
 
-            title = ''.join(title_list).strip()
-            url = ''.join(url_list).strip()
-            snippet = (
-                ''.join(snip.text_content() for snip in snippet_nodes).strip().replace('\n', ' ')
-            )
+            title = _node_text(title_list)
+            url = _node_text(url_list)
+            snippet = _node_text(snippet_nodes)
 
             try:
                 result = SearchResult(title=title, url=url, snippet=snippet)
@@ -90,9 +117,7 @@ class SyncScraper(BaseScraper[httpx.Client]):
     def __enter__(self) -> 'SyncScraper':
         """Enter the context, creating a client if needed."""
         if self._owns_client:
-            self._client = httpx.Client(
-                follow_redirects=True, http2=True, headers=self.config.headers
-            )
+            self._client = httpx.Client(**_client_kwargs(self.config))
         return self
 
     def __exit__(
@@ -116,9 +141,8 @@ class SyncScraper(BaseScraper[httpx.Client]):
                 params={self.config.query_param: query},
             )
             response.raise_for_status()
-        except httpx.RequestError as e:
-            msg = f'An error occurred while requesting {e.request.url!r}.'
-            raise NetworkError(msg) from e
+        except httpx.HTTPError as e:
+            raise _wrap_http_error(e) from e
 
         return self._parse_html(response.text, max_results=max_results)
 
@@ -129,9 +153,7 @@ class AsyncScraper(BaseScraper[httpx.AsyncClient]):
     async def __aenter__(self) -> 'AsyncScraper':
         """Enter the async context, creating a client if needed."""
         if self._owns_client:
-            self._client = httpx.AsyncClient(
-                follow_redirects=True, http2=True, headers=self.config.headers
-            )
+            self._client = httpx.AsyncClient(**_client_kwargs(self.config))
         return self
 
     async def __aexit__(
@@ -155,8 +177,7 @@ class AsyncScraper(BaseScraper[httpx.AsyncClient]):
                 params={self.config.query_param: query},
             )
             response.raise_for_status()
-        except httpx.RequestError as e:
-            msg = f'An error occurred while requesting {e.request.url!r}.'
-            raise NetworkError(msg) from e
+        except httpx.HTTPError as e:
+            raise _wrap_http_error(e) from e
 
         return self._parse_html(response.text, max_results=max_results)

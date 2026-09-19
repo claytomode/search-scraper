@@ -16,4 +16,4 @@ class SearchResult(BaseModel):
 
     title: str = Field(..., description='The title of the search result.')
     url: HttpUrl = Field(..., description='The URL of the search result.')
-    snippet: str = Field(..., description='A brief description of the result.')
+    snippet: str = Field(default='', description='A brief description of the result.')

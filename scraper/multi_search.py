@@ -28,8 +28,9 @@ def search_sync(
         max_results: The maximum number of results to return.
 
     Returns:
-        A list of SearchResult objects, an empty list for a successful search
-        with no results, or None if all scrape attempts failed with an error.
+        A list of SearchResult objects. An empty list only if every engine
+        returned a page with zero parsed hits. Raises ScraperError if every
+        engine errored (timeout, HTTP error, parse crash).
 
     Raises:
         ScraperError: If all scrape attempts fail.
@@ -38,14 +39,18 @@ def search_sync(
     if not configs:
         return None
 
+    saw_empty = False
     for config in configs:
         try:
             with SyncScraper(config=config) as scraper:
                 results = scraper.search(query, max_results=max_results)
-                if results is not None:
-                    return results
         except ScraperError:
             continue
+        if results:
+            return results
+        saw_empty = True
+    if saw_empty:
+        return []
     msg = 'Failed to scrape from all configs.'
     raise ScraperError(msg)
 
@@ -65,8 +70,9 @@ async def search_async(
         max_results: The maximum number of results to return.
 
     Returns:
-        A list of SearchResult objects, an empty list for a successful search
-        with no results, or None if all scrape attempts failed with an error.
+        A list of SearchResult objects. An empty list only if every engine
+        returned a page with zero parsed hits. Raises ScraperError if every
+        engine errored (timeout, HTTP error, parse crash).
 
     Raises:
         ScraperError: If all scrape attempts fail.
@@ -75,14 +81,17 @@ async def search_async(
     if not configs:
         return None
 
+    saw_empty = False
     for config in configs:
         try:
             async with AsyncScraper(config=config) as scraper:
                 results = await scraper.search(query, max_results=max_results)
-                if results is not None:
-                    return results
         except ScraperError:
             continue
-
+        if results:
+            return results
+        saw_empty = True
+    if saw_empty:
+        return []
     msg = 'Failed to scrape from all configs.'
     raise ScraperError(msg)

@@ -29,6 +29,17 @@ async def test_async_scraper_success(
     assert results[1].title == 'Result 2'
 
 
+def test_parse_keeps_result_without_snippet(
+    sample_config: ScraperConfig, sample_html_content: bytes
+) -> None:
+    from scraper.client import SyncScraper
+
+    scraper = SyncScraper(config=sample_config)
+    results = scraper._parse_html(sample_html_content.decode(), max_results=5)
+    assert [r.title for r in results] == ['Result 1', 'Result 2', 'Result 3']
+    assert results[2].snippet == ''
+
+
 @pytest.mark.asyncio
 async def test_async_scraper_network_error(
     httpx_mock: HTTPXMock, sample_config: ScraperConfig
