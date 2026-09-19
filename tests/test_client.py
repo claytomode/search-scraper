@@ -40,6 +40,34 @@ def test_parse_keeps_result_without_snippet(
     assert results[2].snippet == ''
 
 
+def test_parse_brave_web_snippet() -> None:
+    from scraper.client import SyncScraper
+    from scraper.config import ScraperConfig
+
+    cfg = ScraperConfig(
+        name='brave',
+        base_url='https://search.brave.com/search',
+        query_param='q',
+        container="//div[@data-type='web']",
+        title=".//div[contains(@class, 'search-snippet-title')]",
+        url=".//a[contains(@class, 'l1')]/@href",
+        snippet=".//div[contains(@class, 'generic-snippet')]//div[contains(@class, 'content')]",
+    )
+    html = """
+    <div class="snippet" data-type="web">
+      <a class="l1" href="https://www.seattlechukis.com/">
+        <div class="search-snippet-title">Home | Tacos Chukis</div>
+      </a>
+      <div class="generic-snippet"><div class="content">Counter-serve tacos in Capitol Hill.</div></div>
+    </div>
+    """
+    scraper = SyncScraper(config=cfg)
+    results = scraper._parse_html(html, max_results=5)
+    assert results[0].title == 'Home | Tacos Chukis'
+    assert str(results[0].url) == 'https://www.seattlechukis.com/'
+    assert 'Capitol Hill' in results[0].snippet
+
+
 @pytest.mark.asyncio
 async def test_async_scraper_network_error(
     httpx_mock: HTTPXMock, sample_config: ScraperConfig

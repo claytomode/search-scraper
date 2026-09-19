@@ -23,6 +23,8 @@ class ScraperConfig:
     url: str
     snippet: str
     headers: dict[str, str] | None = field(default=None)
+    impersonate: str | None = None
+    """TLS fingerprint for curl_cffi, e.g. ``chrome``. None uses plain httpx."""
 
 
 def find_config_file() -> Path | None:

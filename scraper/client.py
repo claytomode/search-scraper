@@ -1,5 +1,8 @@
 """Configurable, asynchronous client for scraping search engines."""
 
+from __future__ import annotations
+
+import inspect
 from types import TracebackType
 from typing import TYPE_CHECKING, Any, TypeVar
 
@@ -111,13 +114,48 @@ class BaseScraper[ClientT: (httpx.Client, httpx.AsyncClient)]:
         return results
 
 
+def _owned_client(config: ScraperConfig, *, async_client: bool) -> Any:
+    if config.impersonate:
+        from curl_cffi.requests import AsyncSession
+        from curl_cffi.requests import Session
+
+        kwargs: dict[str, Any] = {
+            'impersonate': config.impersonate,
+            'timeout': 10,
+            'headers': config.headers,
+        }
+        return AsyncSession(**kwargs) if async_client else Session(**kwargs)
+    if async_client:
+        return httpx.AsyncClient(**_client_kwargs(config))
+    return httpx.Client(**_client_kwargs(config))
+
+
+def _request_error(exc: BaseException) -> NetworkError:
+    if isinstance(exc, httpx.HTTPError):
+        return _wrap_http_error(exc)
+    return NetworkError(f'{type(exc).__name__}: {exc}')
+
+
+async def _aclose(client: Any) -> None:
+    aclose = getattr(client, 'aclose', None)
+    if aclose is not None:
+        await aclose()
+        return
+    close = getattr(client, 'close', None)
+    if close is None:
+        return
+    result = close()
+    if inspect.isawaitable(result):
+        await result
+
+
 class SyncScraper(BaseScraper[httpx.Client]):
     """A synchronous, config-driven scraper for search engine results."""
 
     def __enter__(self) -> 'SyncScraper':
         """Enter the context, creating a client if needed."""
         if self._owns_client:
-            self._client = httpx.Client(**_client_kwargs(self.config))
+            self._client = _owned_client(self.config, async_client=False)
         return self
 
     def __exit__(
@@ -141,8 +179,8 @@ class SyncScraper(BaseScraper[httpx.Client]):
                 params={self.config.query_param: query},
             )
             response.raise_for_status()
-        except httpx.HTTPError as e:
-            raise _wrap_http_error(e) from e
+        except Exception as e:
+            raise _request_error(e) from e
 
         return self._parse_html(response.text, max_results=max_results)
 
@@ -153,7 +191,7 @@ class AsyncScraper(BaseScraper[httpx.AsyncClient]):
     async def __aenter__(self) -> 'AsyncScraper':
         """Enter the async context, creating a client if needed."""
         if self._owns_client:
-            self._client = httpx.AsyncClient(**_client_kwargs(self.config))
+            self._client = _owned_client(self.config, async_client=True)
         return self
 
     async def __aexit__(
@@ -164,7 +202,7 @@ class AsyncScraper(BaseScraper[httpx.AsyncClient]):
     ) -> None:
         """Exit the async context, closing the client if owned."""
         if self._owns_client and self._client:
-            await self._client.aclose()
+            await _aclose(self._client)
 
     async def search(self, query: str, max_results: int | None = None) -> list[SearchResult]:
         """Perform an asynchronous search and return the parsed results."""
@@ -177,7 +215,7 @@ class AsyncScraper(BaseScraper[httpx.AsyncClient]):
                 params={self.config.query_param: query},
             )
             response.raise_for_status()
-        except httpx.HTTPError as e:
-            raise _wrap_http_error(e) from e
+        except Exception as e:
+            raise _request_error(e) from e
 
         return self._parse_html(response.text, max_results=max_results)

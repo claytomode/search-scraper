@@ -1,16 +1,27 @@
 default_headers: &default_headers
-  User-Agent: "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Safari/537.36"
+  User-Agent: "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/128.0.0.0 Safari/537.36"
 
 scrapers:
-
-  - name: "html_duckduckgo"
-    base_url: "https://html.duckduckgo.com/html/"
+  # Brave HTML works with a Chrome TLS fingerprint. DDG from many IPs never connects.
+  - name: "brave"
+    base_url: "https://search.brave.com/search"
     query_param: "q"
-    container: "//div[contains(@class, 'web-result')]"
-    title: ".//a[contains(@class, 'result__a')]/text()"
-    url: ".//a[contains(@class, 'result__a')]/@href"
-    snippet: ".//a[contains(@class, 'result__snippet')]"
+    container: "//div[@data-type='web']"
+    title: ".//div[contains(@class, 'search-snippet-title')]"
+    url: ".//a[contains(@class, 'l1')]/@href"
+    snippet: ".//div[contains(@class, 'generic-snippet')]//div[contains(@class, 'content')]"
     headers: *default_headers
+    impersonate: chrome
+
+  - name: "startpage"
+    base_url: "https://www.startpage.com/sp/search"
+    query_param: "query"
+    container: "//div[contains(@class, 'result')]"
+    title: ".//h2[contains(@class, 'wgl-title')]/text()"
+    url: ".//a[contains(@class, 'result-title')]/@href"
+    snippet: ".//p[contains(@class, 'description')]"
+    headers: *default_headers
+    impersonate: chrome
 
   - name: "lite_duckduckgo"
     base_url: "https://lite.duckduckgo.com/lite/"
@@ -21,20 +32,11 @@ scrapers:
     snippet: "following-sibling::tr[1]/td[@class='result-snippet']"
     headers: *default_headers
 
-  - name: "startpage"
-    base_url: "https://www.startpage.com/sp/search"
-    query_param: "query"
-    container: "//div[contains(@class, 'result')]"
-    title: ".//h2[contains(@class, 'wgl-title')]/text()"
-    url: ".//a[contains(@class, 'result-title')]/@href"
-    snippet: ".//p[contains(@class, 'description')]"
-    headers: *default_headers
-
-  - name: "brave"
-    base_url: "https://search.brave.com/search"
-    container: "//div[contains(@class, 'snippet ')]"
-    title: ".//div[contains(@class, 'title')]/text()"
-    url: ".//a[contains(@class, 'heading-serpresult')]/@href"
-    snippet: ".//div[contains(@class, 'snippet-description')]"
-    query_param: 'q'
+  - name: "html_duckduckgo"
+    base_url: "https://html.duckduckgo.com/html/"
+    query_param: "q"
+    container: "//div[contains(@class, 'web-result')]"
+    title: ".//a[contains(@class, 'result__a')]/text()"
+    url: ".//a[contains(@class, 'result__a')]/@href"
+    snippet: ".//a[contains(@class, 'result__snippet')]"
     headers: *default_headers
